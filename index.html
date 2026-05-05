@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>画像認識デモ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+</head>
+<body>
+
+<h2>画像認識（ブラウザ）</h2>
+
+<input type="file" id="upload" accept="image/*">
+<br><br>
+<img id="img" width="300">
+<p id="result">結果：</p>
+
+<script>
+let model;
+
+// モデル読み込み
+async function loadModel() {
+    model = await mobilenet.load();
+    console.log("モデル読み込み完了");
+}
+loadModel();
+
+// 画像選択時
+document.getElementById("upload").addEventListener("change", async function(e) {
+    const file = e.target.files[0];
+    const img = document.getElementById("img");
+
+    img.src = URL.createObjectURL(file);
+
+    img.onload = async () => {
+        const predictions = await model.classify(img);
+
+        let text = "結果：<br>";
+        predictions.forEach(p => {
+            text += `${p.className} (${(p.probability * 100).toFixed(2)}%)<br>`;
+        });
+
+        document.getElementById("result").innerHTML = text;
+    };
+});
+</script>
+
+</body>
+</html>		
