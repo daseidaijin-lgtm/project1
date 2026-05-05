@@ -40,7 +40,7 @@ function updateTurn(){
 
 async function setupCamera(){
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "environment" },
+    video: { facingMode: "user" },
     audio: false
   });
   video.srcObject = stream;
