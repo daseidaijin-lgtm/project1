@@ -5,6 +5,7 @@ let ctx = document.getElementById("canvas").getContext("2d");
 let board;
 let currentPlayer;
 let mode = "pvp";
+let cpuLevel = "easy";
 
 let lastCell = null;
 let lastGesture = null;
@@ -160,6 +161,18 @@ function showVictory(){
 }
 
 function cpuMove(){
+  cpuLevel = document.getElementById("cpuLevel").value;
+
+  if(cpuLevel === "easy"){
+    cpuRandomMove();
+  } else if(cpuLevel === "normal"){
+    cpuNormalMove();
+  } else {
+    cpuHardMove();
+  }
+}
+
+function getEmptyCells(){
   let empty = [];
 
   for(let y=0;y<3;y++){
@@ -168,9 +181,41 @@ function cpuMove(){
     }
   }
 
+  return empty;
+}
+
+function cpuRandomMove(){
+  const empty = getEmptyCells();
   if(empty.length === 0) return;
 
   const move = empty[Math.floor(Math.random()*empty.length)];
+  placeCpu(move);
+}
+
+function cpuNormalMove(){
+  const winMove = findBestMove("X");
+  if(winMove){
+    placeCpu(winMove);
+    return;
+  }
+
+  const blockMove = findBestMove("O");
+  if(blockMove){
+    placeCpu(blockMove);
+    return;
+  }
+
+  cpuRandomMove();
+}
+
+function cpuHardMove(){
+  const best = minimax(board, "X").move;
+  if(best){
+    placeCpu(best);
+  }
+}
+
+function placeCpu(move){
   board[move.y][move.x] = "X";
 
   if(checkWin()){
@@ -182,6 +227,85 @@ function cpuMove(){
   updateTurn();
 }
 
+function findBestMove(player){
+  const empty = getEmptyCells();
+
+  for(const move of empty){
+    board[move.y][move.x] = player;
+
+    const win = checkWin();
+
+    board[move.y][move.x] = "";
+
+    if(win) return move;
+  }
+
+  return null;
+}
+
+function minimax(newBoard, player){
+  const empty = getEmptyCells();
+
+  if(checkWinnerFor("X")) return { score: 10 };
+  if(checkWinnerFor("O")) return { score: -10 };
+  if(empty.length === 0) return { score: 0 };
+
+  let moves = [];
+
+  for(const cell of empty){
+    newBoard[cell.y][cell.x] = player;
+
+    let result;
+    if(player === "X"){
+      result = minimax(newBoard, "O");
+    } else {
+      result = minimax(newBoard, "X");
+    }
+
+    moves.push({
+      move: cell,
+      score: result.score
+    });
+
+    newBoard[cell.y][cell.x] = "";
+  }
+
+  let bestMove;
+
+  if(player === "X"){
+    let bestScore = -Infinity;
+    for(let i=0;i<moves.length;i++){
+      if(moves[i].score > bestScore){
+        bestScore = moves[i].score;
+        bestMove = i;
+      }
+    }
+  } else {
+    let bestScore = Infinity;
+    for(let i=0;i<moves.length;i++){
+      if(moves[i].score < bestScore){
+        bestScore = moves[i].score;
+        bestMove = i;
+      }
+    }
+  }
+
+  return moves[bestMove];
+}
+
+function checkWinnerFor(player){
+  const b = board;
+
+  for(let i=0;i<3;i++){
+    if(b[i][0]===player && b[i][1]===player && b[i][2]===player) return true;
+    if(b[0][i]===player && b[1][i]===player && b[2][i]===player) return true;
+  }
+
+  if(b[0][0]===player && b[1][1]===player && b[2][2]===player) return true;
+  if(b[0][2]===player && b[1][1]===player && b[2][0]===player) return true;
+
+  return false;
+}
 async function detect(){
   if(cooldown || gameOver){
     drawGrid();
