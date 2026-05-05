@@ -24,8 +24,10 @@ function resetGame(){
   holdStartTime = 0;
   cooldown = false;
   gameOver = false;
+
   document.getElementById("victory").style.display = "none";
   updateTurn();
+  drawGrid();
 }
 
 function setMode(m){
@@ -60,14 +62,16 @@ function drawGrid(activeCell=null, progress=0){
   ctx.clearRect(0,0,300,225);
 
   if(activeCell){
-    ctx.fillStyle="rgba(255,255,0,0.3)";
+    ctx.fillStyle = "rgba(0,255,120,0.55)";
     ctx.fillRect(activeCell.col*100, activeCell.row*75,100,75);
 
-    ctx.fillStyle="black";
-    ctx.fillRect(activeCell.col*100, activeCell.row*75+68,100*progress,7);
+    ctx.fillStyle = "rgba(0,255,255,0.9)";
+    ctx.fillRect(activeCell.col*100, activeCell.row*75+66,100*progress,9);
   }
 
   ctx.strokeStyle="black";
+  ctx.lineWidth=3;
+
   for(let i=1;i<3;i++){
     ctx.beginPath();
     ctx.moveTo(i*100,0);
@@ -80,16 +84,27 @@ function drawGrid(activeCell=null, progress=0){
     ctx.stroke();
   }
 
-  ctx.font="40px Arial";
+  ctx.font="42px Arial";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+
   for(let y=0;y<3;y++){
     for(let x=0;x<3;x++){
-      ctx.fillText(board[y][x],x*100+30,y*75+50);
+      ctx.fillStyle="black";
+      ctx.fillText(board[y][x],x*100+50,y*75+38);
     }
   }
 }
 
 function getCell(x,y){
-  return { col:Math.floor(x/100), row:Math.floor(y/75) };
+  const col = Math.floor(x/100);
+  const row = Math.floor(y/75);
+
+  if(row < 0 || row > 2 || col < 0 || col > 2){
+    return null;
+  }
+
+  return { row, col };
 }
 
 function distance(a,b){
@@ -97,119 +112,155 @@ function distance(a,b){
 }
 
 function countFingers(hand){
-  const lm=hand.landmarks;
-  let count=0;
-  const tips=[8,12,16,20];
-  const pips=[6,10,14,18];
+  const lm = hand.landmarks;
+  let count = 0;
+
+  const tips = [8,12,16,20];
+  const pips = [6,10,14,18];
 
   for(let i=0;i<tips.length;i++){
-    if(lm[tips[i]][1]<lm[pips[i]][1]) count++;
+    if(lm[tips[i]][1] < lm[pips[i]][1]){
+      count++;
+    }
   }
+
   return count;
 }
 
 function getGesture(hand){
-  const lm=hand.landmarks;
-  const dist=distance(lm[4],lm[8]);
-  const fingers=countFingers(hand);
+  const lm = hand.landmarks;
 
-  if(dist<35) return "O";
-  if(fingers>=3) return "X";
+  const thumbIndexDist = distance(lm[4], lm[8]);
+  const fingers = countFingers(hand);
+
+  if(thumbIndexDist < 28) return "O";
+
+  if(fingers >= 4) return "X";
+
   return null;
 }
 
 function checkWin(){
-  const b=board;
+  const b = board;
 
   for(let i=0;i<3;i++){
-    if(b[i][0]&&b[i][0]==b[i][1]&&b[i][1]==b[i][2]) return true;
-    if(b[0][i]&&b[0][i]==b[1][i]&&b[1][i]==b[2][i]) return true;
+    if(b[i][0] && b[i][0]===b[i][1] && b[i][1]===b[i][2]) return true;
+    if(b[0][i] && b[0][i]===b[1][i] && b[1][i]===b[2][i]) return true;
   }
-  if(b[0][0]&&b[0][0]==b[1][1]&&b[1][1]==b[2][2]) return true;
-  if(b[0][2]&&b[0][2]==b[1][1]&&b[1][1]==b[2][0]) return true;
+
+  if(b[0][0] && b[0][0]===b[1][1] && b[1][1]===b[2][2]) return true;
+  if(b[0][2] && b[0][2]===b[1][1] && b[1][1]===b[2][0]) return true;
 
   return false;
 }
 
+function showVictory(){
+  gameOver = true;
+  document.getElementById("victory").style.display = "block";
+}
+
 function cpuMove(){
-  let empty=[];
+  let empty = [];
+
   for(let y=0;y<3;y++){
     for(let x=0;x<3;x++){
       if(!board[y][x]) empty.push({y,x});
     }
   }
-  if(empty.length===0) return;
 
-  const move=empty[Math.floor(Math.random()*empty.length)];
-  board[move.y][move.x]="X";
+  if(empty.length === 0) return;
+
+  const move = empty[Math.floor(Math.random()*empty.length)];
+  board[move.y][move.x] = "X";
 
   if(checkWin()){
-    document.getElementById("victory").style.display="block";
+    showVictory();
     return;
   }
 
-  currentPlayer="O";
+  currentPlayer = "O";
   updateTurn();
 }
 
 async function detect(){
-  if(cooldown||gameOver){
+  if(cooldown || gameOver){
     drawGrid();
     requestAnimationFrame(detect);
     return;
   }
 
-  const preds=await model.estimateHands(video);
+  const preds = await model.estimateHands(video);
 
-  if(preds.length>0){
-    const hand=preds[0];
-    const x=hand.landmarks[8][0];
-    const y=hand.landmarks[8][1];
+  if(preds.length > 0){
+    const hand = preds[0];
 
-    const cell=getCell(x,y);
-    const gesture=getGesture(hand);
+    const x = hand.landmarks[8][0];
+    const y = hand.landmarks[8][1];
 
-    if(cell&&gesture&&!board[cell.row][cell.col]){
-      if(lastCell&&cell.row==lastCell.row&&cell.col==lastCell.col&&gesture==lastGesture){
+    const cell = getCell(x,y);
+    const gesture = getGesture(hand);
 
-        if(Date.now()-holdStartTime>HOLD_TIME){
+    if(cell && gesture && !board[cell.row][cell.col]){
+      if(
+        lastCell &&
+        cell.row === lastCell.row &&
+        cell.col === lastCell.col &&
+        gesture === lastGesture
+      ){
+        const elapsed = Date.now() - holdStartTime;
+        const progress = Math.min(elapsed / HOLD_TIME, 1);
 
-          if(mode==="cpu"){
-            board[cell.row][cell.col]="O";
-            currentPlayer="X";
-            cpuMove();
-          }else{
-            board[cell.row][cell.col]=gesture;
-            currentPlayer=currentPlayer==="O"?"X":"O";
+        drawGrid(cell, progress);
+
+        if(elapsed >= HOLD_TIME){
+          if(mode === "cpu"){
+            board[cell.row][cell.col] = "O";
+
+            if(checkWin()){
+              showVictory();
+              return;
+            }
+
+            currentPlayer = "X";
+            updateTurn();
+            setTimeout(cpuMove, 700);
+          } else {
+            board[cell.row][cell.col] = gesture;
+
+            if(checkWin()){
+              showVictory();
+              return;
+            }
+
+            currentPlayer = currentPlayer === "O" ? "X" : "O";
+            updateTurn();
           }
 
-          if(checkWin()){
-            document.getElementById("victory").style.display="block";
-            gameOver=true;
-          }
+          cooldown = true;
+          lastCell = null;
+          lastGesture = null;
+          holdStartTime = 0;
 
-          cooldown=true;
-          setTimeout(()=>cooldown=false,COOLDOWN_TIME);
+          setTimeout(() => {
+            cooldown = false;
+          }, COOLDOWN_TIME);
         }
-
-      }else{
-        lastCell=cell;
-        lastGesture=gesture;
-        holdStartTime=Date.now();
+      } else {
+        lastCell = cell;
+        lastGesture = gesture;
+        holdStartTime = Date.now();
+        drawGrid(cell, 0);
       }
-
-      let progress=(Date.now()-holdStartTime)/HOLD_TIME;
-      drawGrid(cell,progress);
-
-    }else{
-      lastCell=null;
-      lastGesture=null;
+    } else {
+      lastCell = null;
+      lastGesture = null;
+      holdStartTime = 0;
       drawGrid();
     }
-
-  }else{
-    lastCell=null;
-    lastGesture=null;
+  } else {
+    lastCell = null;
+    lastGesture = null;
+    holdStartTime = 0;
     drawGrid();
   }
 
@@ -222,3 +273,5 @@ async function start(){
   await loadModel();
   detect();
 }
+
+resetGame();
