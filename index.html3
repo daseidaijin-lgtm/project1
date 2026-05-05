@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ジェスチャー三目並べ</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+
+<style>
+body { text-align:center; }
+canvas { position:absolute; left:0; top:0; }
+video { transform: scaleX(-1); }
+
+#victory {
+  position:absolute;
+  top:40%;
+  width:100%;
+  font-size:50px;
+  color:red;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<h2>ジェスチャー三目並べ</h2>
+
+<div>
+  <button onclick="setMode('pvp')">対人</button>
+  <button onclick="setMode('cpu')">CPU対戦</button>
+  <button onclick="start()">開始</button>
+  <button onclick="resetGame()">リセット</button>
+</div>
+
+<p id="turn">現在のターン: O</p>
+
+<div style="position:relative; display:inline-block;">
+  <video id="video" width="300" height="225" playsinline></video>
+  <canvas id="canvas" width="300" height="225"></canvas>
+</div>
+
+<div id="victory">VICTORY!</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
