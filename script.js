@@ -187,4 +187,3 @@ async function start(){
   await setupCamera();
   await loadModel();
   detect();
-}
