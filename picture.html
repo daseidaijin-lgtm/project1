@@ -29,9 +29,16 @@ video { transform: scaleX(-1); }
 
 <div>
   <button onclick="setMode('pvp')">対人</button>
-  <button onclick="setMode('cpu')">CPU対戦</button>
-  <button onclick="start()">開始</button>
-  <button onclick="resetGame()">リセット</button>
+
+<select id="cpuLevel">
+  <option value="easy">CPU: 弱い</option>
+  <option value="normal">CPU: 普通</option>
+  <option value="hard">CPU: 強い</option>
+</select>
+
+<button onclick="setMode('cpu')">CPU対戦</button>
+<button onclick="start()">開始</button>
+<button onclick="resetGame()">リセット</button>
 </div>
 
 <p id="turn">現在のターン: O</p>
